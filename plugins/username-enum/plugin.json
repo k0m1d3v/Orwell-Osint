@@ -1,0 +1,10 @@
+{
+  "id": "username-enum",
+  "name": "Username Enumeration",
+  "version": "1.0.0",
+  "author": "orwell-osint-core",
+  "category": "identity",
+  "sensitiveData": false,
+  "requiresConsent": false,
+  "dependencies": {}
+}

@@ -1,0 +1,10 @@
+{
+  "id": "metadata-extractor",
+  "name": "File Metadata Extractor",
+  "version": "1.0.0",
+  "author": "orwell-osint-core",
+  "category": "media",
+  "sensitiveData": false,
+  "requiresConsent": false,
+  "dependencies": {}
+}

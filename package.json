@@ -1,0 +1,23 @@
+{
+  "name": "orwell-osint",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open source intelligence tool with a community-extensible plugin architecture.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "bin": {
+    "orwell": "./cli.js"
+  },
+  "scripts": {
+    "start": "node cli.js",
+    "test": "node --test",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5"
+  }
+}

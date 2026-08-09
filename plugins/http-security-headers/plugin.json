@@ -1,0 +1,10 @@
+{
+  "id": "http-security-headers",
+  "name": "HTTP Security Headers Check",
+  "version": "1.0.0",
+  "author": "orwell-osint-core",
+  "category": "network",
+  "sensitiveData": false,
+  "requiresConsent": false,
+  "dependencies": {}
+}
