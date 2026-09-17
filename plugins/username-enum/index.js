@@ -27,7 +27,32 @@ const DEFAULT_TIMEOUT_MS = 5000;
 // alphanumeric character.
 const USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,38}$/;
 
-async function checkSite(site, username, fetchImpl, timeoutMs) {
+// A custom site is supplied as "Name=URLTemplate", e.g.
+// "Keybase=https://keybase.io/_/api/1.0/user/lookup.json?username={username}".
+// The template must contain the literal "{username}" placeholder.
+const CUSTOM_SITE_PATTERN = /^([^=]+)=(.+)$/;
+
+/**
+ * @param {string} raw - one --site value, "Name=URLTemplate"
+ * @returns {{ site: object } | { error: string }}
+ */
+function parseCustomSite(raw) {
+  const match = CUSTOM_SITE_PATTERN.exec(raw);
+  const name = match?.[1]?.trim();
+  const template = match?.[2]?.trim();
+
+  if (!name || !template) {
+    return { error: `Malformed --site value "${raw}" — expected "Name=URLTemplate"` };
+  }
+  if (!template.includes('{username}')) {
+    return { error: `Malformed --site value "${raw}" — URL template must contain "{username}"` };
+  }
+  return {
+    site: { name, buildUrl: (u) => template.replace('{username}', encodeURIComponent(u)), custom: true },
+  };
+}
+
+async function checkSite(site, username, fetchImpl, timeoutMs, antiFalsePositive) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -37,12 +62,45 @@ async function checkSite(site, username, fetchImpl, timeoutMs) {
       signal: controller.signal,
     });
 
+    let body;
+    let rawFound;
     if (site.emptyArrayMeansNotFound) {
-      const body = await response.json().catch(() => []);
-      return { site: site.name, found: Array.isArray(body) && body.length > 0, statusCode: response.status };
+      body = await response.json().catch(() => []);
+      rawFound = Array.isArray(body) && body.length > 0;
+    } else {
+      rawFound = response.status === 200;
     }
 
-    return { site: site.name, found: response.status === 200, statusCode: response.status };
+    if (!rawFound) {
+      return { site: site.name, found: false, statusCode: response.status };
+    }
+    if (!antiFalsePositive) {
+      return { site: site.name, found: true, statusCode: response.status };
+    }
+
+    // Anti-false-positive check: some sites return 200 (or, for
+    // emptyArrayMeansNotFound sites, a non-empty array) for *any* input —
+    // a parked page, a generic profile shell, a catch-all redirect. Read
+    // the body and confirm the username actually appears in it before
+    // trusting the status code / array-length signal alone.
+    //
+    // Read as text, never re-attempt json() here: a body can only be read
+    // once, and response.json() internally reads-then-parses, so on a
+    // non-JSON body (any HTML site — Instagram, GitHub's own profile
+    // pages, ...) a failed .json() already drained the stream, leaving a
+    // fallback .text() call on the same response silently empty. That
+    // previously made every non-JSON site register as a false positive
+    // no matter what it actually said.
+    if (body === undefined) {
+      body = await response.text().catch(() => '');
+    }
+    const haystack = (typeof body === 'string' ? body : JSON.stringify(body)).toLowerCase();
+    const verified = haystack.includes(username.toLowerCase());
+
+    if (!verified) {
+      return { site: site.name, found: false, statusCode: response.status, falsePositiveSuspected: true };
+    }
+    return { site: site.name, found: true, statusCode: response.status, verified: true };
   } catch (err) {
     return { site: site.name, found: false, error: err.name === 'AbortError' ? 'timeout' : err.message };
   } finally {
@@ -78,21 +136,33 @@ export default class UsernameEnumPlugin extends OsintPlugin {
    * @param {object} [config]
    * @param {typeof fetch} [config.fetchImpl] - injectable for tests; defaults to global fetch
    * @param {number} [config.timeoutMs] - per-site request timeout
+   * @param {boolean} [config.antiFalsePositive] - verify the username appears in the body,
+   *   not just the status code, before counting a site as a match
+   * @param {string[]} [config.customSites] - extra sites as "Name=URLTemplate" strings,
+   *   checked alongside the built-in list for this run only
    */
   async run(input, config = {}) {
     const fetchImpl = config.fetchImpl || globalThis.fetch;
     const timeoutMs = config.timeoutMs || DEFAULT_TIMEOUT_MS;
+    const antiFalsePositive = Boolean(config.antiFalsePositive);
 
-    const checked = await Promise.all(SITES.map((site) => checkSite(site, input, fetchImpl, timeoutMs)));
+    const parsedCustomSites = (config.customSites || []).map(parseCustomSite);
+    const customSiteErrors = parsedCustomSites.filter((r) => 'error' in r).map((r) => r.error);
+    const customSites = parsedCustomSites.filter((r) => 'site' in r).map((r) => r.site);
+    const sitesToCheck = [...SITES, ...customSites];
+
+    const checked = await Promise.all(
+      sitesToCheck.map((site) => checkSite(site, input, fetchImpl, timeoutMs, antiFalsePositive)),
+    );
     const matches = checked.filter((result) => result.found);
 
     return {
       success: true,
-      data: { username: input, matches, checked },
+      data: { username: input, matches, checked, customSiteErrors },
       provenance: {
         plugin: UsernameEnumPlugin.meta.id,
-        pluginVersion: '1.0.0',
-        sources: SITES.map((site) => site.name),
+        pluginVersion: '1.1.0',
+        sources: sitesToCheck.map((site) => site.name),
       },
       timestamp: new Date().toISOString(),
       confidence: checked.length === 0 ? 0 : matches.length / checked.length,

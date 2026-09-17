@@ -5,6 +5,7 @@ import { usePluginStore } from '../stores/pluginStore';
 import { useAuditStore } from '../stores/auditStore';
 import ResultPanel from '../components/ResultPanel.vue';
 import ConsentModal from '../components/ConsentModal.vue';
+import ConfigureModal from '../components/ConfigureModal.vue';
 
 const props = defineProps<{ pluginId: string }>();
 const router = useRouter();
@@ -13,6 +14,30 @@ const auditStore = useAuditStore();
 
 const plugin = computed(() => pluginStore.byId(props.pluginId));
 const input = ref('');
+const showConfigure = ref(false);
+
+const isConfigurable = computed(() => (plugin.value?.configFields?.length ?? 0) > 0);
+
+// A small count so "Configure" shows at a glance whether anything
+// non-default is actually set, without opening the panel.
+const activeConfigCount = computed(() => {
+  if (!plugin.value) return 0;
+  const config = pluginStore.configFor(plugin.value.manifest.id);
+  let count = 0;
+  for (const field of plugin.value.configFields ?? []) {
+    if (field.type === 'boolean' && Boolean(config[field.key]) !== field.default) count += 1;
+    if (field.type === 'site-list' && Array.isArray(config[field.key]) && (config[field.key] as unknown[]).length > 0) {
+      count += (config[field.key] as unknown[]).length;
+    }
+  }
+  return count;
+});
+
+function handleConfigureSave(config: Record<string, unknown>) {
+  if (!plugin.value) return;
+  pluginStore.setRunConfig(plugin.value.manifest.id, config);
+  showConfigure.value = false;
+}
 
 // Sample input per plugin, so the form isn't empty on first visit —
 // mirrors the artifact's pre-filled "octocat" / file-path examples.
@@ -91,9 +116,15 @@ function handleConsentCancel() {
         <label class="run__label section-label">target · {{ plugin.meta.inputType }}</label>
         <input v-model="input" class="run__input" :placeholder="SAMPLE_INPUT[plugin.manifest.id] ?? ''" />
 
-        <button class="run__submit" :disabled="pluginStore.run.status === 'running' || !input" @click="handleRun">
-          {{ pluginStore.run.status === 'running' ? 'Running…' : 'Run plugin' }}
-        </button>
+        <div class="run__actions">
+          <button class="run__submit" :disabled="pluginStore.run.status === 'running' || !input" @click="handleRun">
+            {{ pluginStore.run.status === 'running' ? 'Running…' : 'Run plugin' }}
+          </button>
+          <button v-if="isConfigurable" class="run__configure" @click="showConfigure = true">
+            Configure
+            <span v-if="activeConfigCount > 0" class="run__configure-count">{{ activeConfigCount }}</span>
+          </button>
+        </div>
 
         <p class="run__hint">
           Every run appends one line to <code>./audit-log.jsonl</code> — plugin, input, outcome, operator, timestamp.
@@ -123,6 +154,14 @@ function handleConsentCancel() {
       :input="input"
       @confirm="handleConsentConfirm"
       @cancel="handleConsentCancel"
+    />
+
+    <ConfigureModal
+      v-if="showConfigure"
+      :plugin="plugin"
+      :model-value="pluginStore.configFor(plugin.manifest.id)"
+      @save="handleConfigureSave"
+      @close="showConfigure = false"
     />
   </div>
 </template>
@@ -209,8 +248,13 @@ h1 {
   border-color: var(--accent-dim);
 }
 
+.run__actions {
+  display: flex;
+  gap: 8px;
+}
+
 .run__submit {
-  width: 100%;
+  flex: 1;
   background: var(--accent);
   border: none;
   border-radius: var(--radius);
@@ -225,6 +269,34 @@ h1 {
 .run__submit:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.run__configure {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.run__configure:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+
+.run__configure-count {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-radius: 999px;
+  font-size: 10px;
+  padding: 1px 6px;
 }
 
 .run__hint {

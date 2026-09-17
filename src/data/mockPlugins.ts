@@ -12,7 +12,7 @@ export const mockPlugins: LoadedPlugin[] = [
     manifest: {
       id: 'username-enum',
       name: 'Username Enumeration',
-      version: '1.0.0',
+      version: '1.1.0',
       author: 'orwell-osint-core',
       category: 'identity',
       sensitiveData: false,
@@ -29,6 +29,22 @@ export const mockPlugins: LoadedPlugin[] = [
     },
     description:
       'Checks whether a username exists on GitHub, GitLab, Reddit and Dev.to. Public existence check only — no personal data returned.',
+    configFields: [
+      {
+        key: 'antiFalsePositive',
+        type: 'boolean',
+        label: 'Anti-false-positive verification',
+        description:
+          'Confirm the username actually appears in the response body before trusting a 200 (or non-empty array) as a match. Off by default — it costs an extra body read per site. This UI has no backend, so GitHub/GitLab/Reddit/Dev.to below are canned samples that never actually change — this only visibly affects custom sites you add, which are the unverified case it exists for.',
+        default: false,
+      },
+      {
+        key: 'customSites',
+        type: 'site-list',
+        label: 'Custom sites',
+        description: 'Check extra sites for this run only. URL template must contain a literal {username} placeholder.',
+      },
+    ],
   },
   {
     manifest: {

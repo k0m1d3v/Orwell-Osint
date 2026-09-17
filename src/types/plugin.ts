@@ -27,10 +27,23 @@ export interface PluginMeta {
   outputType: string;
 }
 
+/**
+ * Declarative description of a plugin's optional run-time config, so the
+ * Run screen can render a generic "Configure" panel instead of one bespoke
+ * form per plugin. Mirrors what each field actually does on the Node side
+ * (see plugins/username-enum/index.js's `config.antiFalsePositive` /
+ * `config.customSites`) — a plugin with no configFields just doesn't get
+ * a Configure button.
+ */
+export type PluginConfigField =
+  | { key: string; type: 'boolean'; label: string; description: string; default: boolean }
+  | { key: string; type: 'site-list'; label: string; description: string };
+
 export interface LoadedPlugin {
   manifest: PluginManifest;
   meta: PluginMeta;
   description: string;
+  configFields?: PluginConfigField[];
 }
 
 /** The standard shape every plugin's run() resolves to (assertValidResult). */

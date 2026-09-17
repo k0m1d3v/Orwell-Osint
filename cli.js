@@ -4,6 +4,16 @@
 //   node cli.js <plugin-id> <input> [--format json|csv|pdf] [--out <path>]
 //   node cli.js username-enum octocat
 //   node cli.js username-enum octocat --format pdf --out report.pdf
+//
+// username-enum-specific flags (ignored by every other plugin):
+//   --anti-false-positive         verify the username appears in the response
+//                                  body, not just the status code, before
+//                                  counting a site as a match
+//   --site "Name=URLTemplate"     check an extra site for this run only;
+//                                  repeatable, template must contain
+//                                  "{username}"
+//   node cli.js username-enum octocat --anti-false-positive
+//   node cli.js username-enum octocat --site "Keybase=https://keybase.io/{username}"
 
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
@@ -33,17 +43,21 @@ function parseArgs(argv) {
   // the exporters below use once you opt into --format/--out.
   let format = null;
   let outPath = null;
+  let antiFalsePositive = false;
+  const customSites = [];
 
   for (let i = 0; i < rest.length; i++) {
     if (rest[i] === '--format') format = rest[++i];
     else if (rest[i] === '--out') outPath = rest[++i];
+    else if (rest[i] === '--anti-false-positive') antiFalsePositive = true;
+    else if (rest[i] === '--site') customSites.push(rest[++i]);
   }
 
-  return { pluginId, input, format, outPath };
+  return { pluginId, input, format, outPath, antiFalsePositive, customSites };
 }
 
 async function main() {
-  const { pluginId, input, format, outPath } = parseArgs(process.argv.slice(2));
+  const { pluginId, input, format, outPath, antiFalsePositive, customSites } = parseArgs(process.argv.slice(2));
 
   if (!pluginId || input === undefined) {
     printUsage();
@@ -73,7 +87,11 @@ async function main() {
   const pipeline = new Pipeline();
 
   try {
-    const config = await resolvePluginConfig(loadedPlugin.PluginClass);
+    const config = {
+      ...(await resolvePluginConfig(loadedPlugin.PluginClass)),
+      ...(antiFalsePositive ? { antiFalsePositive } : {}),
+      ...(customSites.length > 0 ? { customSites } : {}),
+    };
     const result = await pipeline.runPlugin(loadedPlugin, input, config);
 
     if (format === null && !outPath) {
