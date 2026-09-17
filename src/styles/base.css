@@ -1,0 +1,82 @@
+/* Dark-only, monospace-first theme matching the approved design
+   (https://claude.ai/artifact/JyGECkZaB1D77SbW8ERT13) — deliberate for a
+   security/investigative tool, not an oversight; no light variant. */
+
+:root {
+  --bg: #0a0a0b;
+  --bg-sidebar: #0e0e10;
+  --bg-panel: #131316;
+  --bg-panel-raised: #18181b;
+  --border: #26262a;
+  --border-strong: #38383e;
+
+  --text: #e7e7ea;
+  --text-dim: #8b8b93;
+  --text-faint: #55555c;
+
+  --accent: #2dd4bf;
+  --accent-dim: #1a7f73;
+  --warn: #f2b03d;
+  --danger: #f2635c;
+  --ok: #34d399;
+
+  --radius: 6px;
+  --font-mono:
+    ui-monospace, 'SFMono-Regular', 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.tag--ok {
+  color: var(--ok);
+  border-color: var(--accent-dim);
+}
+
+.tag--warn {
+  color: var(--warn);
+  border-color: #6b4e1e;
+}
+
+.section-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}

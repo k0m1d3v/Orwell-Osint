@@ -76,7 +76,14 @@ npm test
 npm run lint
 ```
 
-There is no frontend yet — everything runs through this CLI for now.
+A Vue 3 + TypeScript frontend prototype lives under `src/` (plugin
+registry, run screen, audit trail, settings). It's UI-only for now — it
+runs against mock data, not the real pipeline in `core/`, since there's no
+HTTP API yet for a browser to call. Run it with:
+
+```sh
+npm run frontend:dev
+```
 
 ## The plugin architecture, in short
 

@@ -12,6 +12,7 @@ import { loadPlugin } from './core/plugin-loader.js';
 import { Pipeline } from './core/pipeline.js';
 import { ConsentRequiredError } from './core/consent-manager.js';
 import { toJson, toCsv, toPdf } from './core/reporting.js';
+import { resolvePluginConfig } from './core/config-manager.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGINS_DIR = path.join(__dirname, 'plugins');
@@ -72,7 +73,8 @@ async function main() {
   const pipeline = new Pipeline();
 
   try {
-    const result = await pipeline.runPlugin(loadedPlugin, input, {});
+    const config = await resolvePluginConfig(loadedPlugin.PluginClass);
+    const result = await pipeline.runPlugin(loadedPlugin, input, config);
 
     if (format === null && !outPath) {
       console.log(JSON.stringify(result, null, 2));

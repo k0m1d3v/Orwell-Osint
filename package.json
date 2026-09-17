@@ -14,10 +14,22 @@
   "scripts": {
     "start": "node cli.js",
     "test": "node --test",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "frontend:dev": "vite",
+    "frontend:build": "vue-tsc -b && vite build",
+    "frontend:preview": "vite preview"
+  },
+  "dependencies": {
+    "pinia": "^4.0.3",
+    "vue": "^3.5.43",
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
-    "eslint": "^9.39.5"
+    "@vitejs/plugin-vue": "^6.0.9",
+    "eslint": "^9.39.5",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.3",
+    "vue-tsc": "^3.3.11"
   }
 }
