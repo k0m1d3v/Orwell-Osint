@@ -76,14 +76,35 @@ npm test
 npm run lint
 ```
 
-A Vue 3 + TypeScript frontend prototype lives under `src/` (plugin
-registry, run screen, audit trail, settings). It's UI-only for now — it
-runs against mock data, not the real pipeline in `core/`, since there's no
-HTTP API yet for a browser to call. Run it with:
+## Web UI (prototype)
+
+A Vue 3 + TypeScript frontend lives under `src/`, matching the frontend
+architecture described in [ORWELL_OSINT_PLAN.md](ORWELL_OSINT_PLAN.md).
+Run it with:
 
 ```sh
 npm run frontend:dev
 ```
+
+It covers four screens:
+
+- **Plugin registry** — browse the shipped plugins, filterable by
+  category or free text.
+- **Run** — a per-plugin input form and a results panel that renders any
+  plugin's standard result shape generically (structured view + raw
+  JSON), plus a **Configure** panel for plugins that expose extra
+  run-time options (today: `username-enum`'s anti-false-positive
+  verification and custom sites).
+- **Audit trail** — a read-only, filterable view over run history.
+- **Settings** — API key status per plugin and a read-only view of each
+  plugin's manifest.
+
+**This is UI-only.** There's no HTTP API yet for a browser to call, so
+the UI runs entirely against mock data shaped like real plugin output —
+it does not drive the actual pipeline in `core/`. A run you make in the
+CLI and a run you make in the UI are two independent things right now;
+keeping them in sync (e.g. `username-enum`'s custom-site flag) is manual.
+`npm run frontend:build` produces a static production build.
 
 ## The plugin architecture, in short
 
@@ -104,10 +125,12 @@ of any such plugin until explicit consent is granted, by default via an
 interactive CLI prompt. See [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) and
 [docs/ETHICS.md](docs/ETHICS.md) for the governance reasoning.
 
-Adding a plugin does not require touching core code, routing, or (once it
-exists) frontend UI — the loader reads everything it needs from the
-manifest. In practice, a well-scoped plugin (an API wrapper with clear
-input/output) is closer to an afternoon of work than a big project. See
+Adding a plugin does not require touching core code or routing — the
+loader reads everything it needs from the manifest. (The [Web UI](#web-ui-prototype)
+doesn't scan `plugins/` yet — its plugin list is mocked — so a new plugin
+won't show up there automatically until that's wired up.) In practice, a
+well-scoped plugin (an API wrapper with clear input/output) is closer to
+an afternoon of work than a big project. See
 **[docs/PLUGIN_DEVELOPMENT.md](docs/PLUGIN_DEVELOPMENT.md)** for a full
 walkthrough, written from actually building the `username-enum` plugin —
 it documents the real steps and real decisions, not a generic template.
@@ -155,6 +178,10 @@ geolocation (WiGLE, Overpass POI enrichment, IP geolocation), network
   `metadata-extractor`), a generic export layer (`core/reporting.js`,
   PDF/JSON/CSV), a persistent audit log (`core/audit-log.js`), and drafted
   (not yet live) `good-first-issue` tickets for low-sensitivity plugins.
+- **UI prototype — in progress, not versioned.** A Vue 3 + TypeScript
+  frontend under `src/` (see [Web UI](#web-ui-prototype)), built ahead of
+  the backend HTTP API it will eventually need — it currently runs
+  against mock data, not the real `core/` pipeline.
 - **v1.0 — next.** WiGLE geolocation and Overpass POI enrichment
   (`sensitiveData: true`, built and reviewed directly by the maintainer),
   case management, and a revisit of contributor docs based on real
